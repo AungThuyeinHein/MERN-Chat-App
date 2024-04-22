@@ -40,10 +40,10 @@ export const signup = async (req, res) => {
       res.status(201).json({
         status: 201,
         message: "User successfully created",
-        _id: user._id,
-        fullname: user.fullname,
-        username: user.username,
-        profile: user.profile,
+        _id: newUser._id,
+        fullname: newUser.fullname,
+        username: newUser.username,
+        profile: newUser.profile,
       });
     } else {
       res.status(400).json({ status: 400, message: "Invalid user data" });
@@ -58,30 +58,26 @@ export const login = async (req, res) => {
   try {
     const { username, password } = req.body;
     const user = await User.findOne({ username });
-    if (!user) {
-      return res
-        .status(400)
-        .json({ status: 400, message: "Invalid Username or password" });
+    const isPasswordCorrect = await bcrypt.compare(
+      password,
+      user?.password || ""
+    );
+
+    if (!user || !isPasswordCorrect) {
+      return res.status(400).json({ error: "Invalid username or password" });
     }
 
-    const isPasswordCorrect = await bcrypt.compare(password, user.password);
-    if (!isPasswordCorrect) {
-      return res
-        .status(400)
-        .json({ status: 400, message: "Invalid Username or password" });
-    }
+    generateTokenAndSetCookie(user._id, res);
 
-    await generateTokenAndSetCookie(user._id, res);
     res.status(200).json({
-      status: 200,
       _id: user._id,
-      fullname: user.fullname,
+      fullName: user.fullname,
       username: user.username,
-      profile: user.profile,
+      profilePic: user.profile,
     });
   } catch (error) {
-    console.error("Error in login", error.message);
-    res.status(500).json({ status: 500, message: "Something went wrong" });
+    console.log("Error in login controller", error.message);
+    res.status(500).json({ error: "Internal Server Error" });
   }
 };
 
